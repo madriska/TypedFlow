@@ -108,7 +108,7 @@ train_stats = tyf.train(sess,
                         s2s_generator(**train_set),
                         valid_generator = s2s_generator(**val_set),
                         epochs=5000,
-                        callbacks=[tyf.StopWhenAccurate(.01), translate_cb])
+                        callbacks=[tyf.StopWhenAccurate(error_rate=0.01), translate_cb])
 
 translate("(1(3cb)b)")
 translate("(1(2c(3e(4(1cb)b)))c)")

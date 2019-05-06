@@ -1,51 +1,69 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: bd6cd35c4b2f80424c1ba9d9d55cff1f71d70be0dbb2d349c861da7006cdc419
+
 name:           typedflow
 version:        0.9
-category:       Deep Learning
 synopsis:       Typed frontend to TensorFlow and higher-order deep learning
-description: TypedFlow is a typed, higher-order frontend to TensorFlow and a high-level library for deep-learning.
-             .
-             The main design principles are:
-             .
-               - To make the parameters of layers explicit. This choice makes sharing of parameters explicit and allows to implement "layers" as pure functions.
-             .
-               - To provide as precise as possible types. Functions are explicit about the shapes and elements of the tensors that they manipulate (they are often polymorphic in shapes and elements though.)
-             .
-               - To let combinators be as transparent as possible. If a NN layers is a simple tensor transformation it will be exposed as such.
-license:        LGPL-3
-license-file:   LICENSE
+description:    TypedFlow is a typed, higher-order frontend to TensorFlow and a high-level library for deep-learning.
+                .
+                The main design principles are:
+                .
+                - To make the parameters of layers explicit. This choice makes sharing of parameters explicit and allows to implement "layers" as pure functions.
+                .
+                - To provide as precise as possible types. Functions are explicit about the shapes and elements of the tensors that they manipulate (they are often polymorphic in shapes and elements though.)
+                .
+                - To let combinators be as transparent as possible. If a NN layers is a simple tensor transformation it will be exposed as such.
+category:       Deep Learning
 author:         Jean-Philippe Bernardy
 maintainer:     jean-philippe.bernardy@gu.se
-Cabal-Version:  >= 1.12
+license:        LGPL-3
+license-file:   LICENSE
 build-type:     Simple
+
 source-repository head
-  type:     git
+  type: git
   location: git@github.com:GU-CLASP/TypedFlow.git
 
+flag tensorflow
+  manual: False
+  default: False
+
 library
-  default-language: Haskell2010
-  build-depends:
-    base==4.*,
-    ghc-typelits-knownnat,
-    pretty-compact,
-    mtl,
-    containers
-    -- ,tensorflow-opgen, tensorflow, tensorflow-core-ops, tensorflow-ops
-
   exposed-modules:
-       TypedFlow,
-       TypedFlow.Layers,
-       TypedFlow.Layers.Core,
-       TypedFlow.Layers.RNN,
-       TypedFlow.Layers.RNN.Base,
-       TypedFlow.Layers.RNN.Cells,
-       TypedFlow.Layers.RNN.Attention,
-       TypedFlow.Learn,
-       TypedFlow.Models.Topic,
-       TypedFlow.Python,
-       TypedFlow.TF,
-       TypedFlow.Types,
-       TypedFlow.Types.Proofs
-
+      TypedFlow
+      TypedFlow.Layers
+      TypedFlow.Layers.Core
+      TypedFlow.Layers.RNN
+      TypedFlow.Layers.RNN.Base
+      TypedFlow.Layers.RNN.Cells
+      TypedFlow.Layers.RNN.Attention
+      TypedFlow.Learn
+      TypedFlow.Models.Topic
+      TypedFlow.Python
+      TypedFlow.TF
+      TypedFlow.Types
+      TypedFlow.Types.Proofs
   other-modules:
-        TypedFlow.Memo
-        TypedFlow.Abstract
+      TypedFlow.Abstract
+      TypedFlow.Memo
+      Paths_typedflow
+  hs-source-dirs:
+      ./.
+  build-depends:
+      base ==4.*
+    , containers
+    , ghc-typelits-knownnat
+    , mtl
+    , pretty-compact
+  if flag(tensorflow)
+    build-depends:
+        tensorflow
+  if flag(tensorflow)
+    exposed-modules:
+        TypedFlow.Haskell
+  default-language: Haskell2010

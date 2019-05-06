@@ -1,0 +1,80 @@
+name: typedflow
+version: '0.9'
+synopsis: Typed frontend to TensorFlow and higher-order deep learning
+description: ! 'TypedFlow is a typed, higher-order frontend to TensorFlow and a high-level
+  library for deep-learning.
+
+
+  The main design principles are:
+
+
+  - To make the parameters of layers explicit. This choice makes sharing of parameters
+  explicit and allows to implement "layers" as pure functions.
+
+
+  - To provide as precise as possible types. Functions are explicit about the shapes
+  and elements of the tensors that they manipulate (they are often polymorphic in
+  shapes and elements though.)
+
+
+  - To let combinators be as transparent as possible. If a NN layers is a simple tensor
+  transformation it will be exposed as such.'
+category: Deep Learning
+author: Jean-Philippe Bernardy
+maintainer: jean-philippe.bernardy@gu.se
+license: LGPL-3
+git: git@github.com:GU-CLASP/TypedFlow.git
+dependencies:
+  - base ==4.*
+  - ghc-typelits-knownnat
+  - pretty-compact
+  - mtl
+  - containers
+when:
+  - condition: flag(tensorflow)
+    dependencies:
+      - tensorflow
+source-dirs:
+  - .
+library:
+  exposed-modules:
+    - TypedFlow
+    - TypedFlow.Layers
+    - TypedFlow.Layers.Core
+    - TypedFlow.Layers.RNN
+    - TypedFlow.Layers.RNN.Base
+    - TypedFlow.Layers.RNN.Cells
+    - TypedFlow.Layers.RNN.Attention
+    - TypedFlow.Learn
+    - TypedFlow.Models.Topic
+    - TypedFlow.Python
+    - TypedFlow.TF
+    - TypedFlow.Types
+    - TypedFlow.Types.Proofs
+  when:
+    - condition: flag(tensorflow)
+      exposed-modules:
+        - TypedFlow.Haskell
+flags:
+  tensorflow:
+    # If the build fails with tensorflow=False, don't retry with tensorflow=True
+    manual: False
+    default: False
+# executables:
+  # typedflow-agreement:
+  #   source-dirs: examples/agreement
+  #   main: Aggr.hs
+  #   dependencies:
+  #     - typedflow
+  # typedflow-mnist:
+  #   source-dirs: examples/mnist
+  #   main: MNIST.hs
+  #   dependencies:
+  #     - typedflow
+  # typedflow-seq2seq:
+  #   source-dirs: examples/seq2seq
+  #   main: Seq2Seq.hs
+  #   dependencies:
+  #     - array
+  #     - typedflow
+  #     - QuickCheck

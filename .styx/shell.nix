@@ -2,7 +2,7 @@
 
  }:
 let nixpkgs_source =
-fetchTarball "https://github.com/NixOS/nixpkgs-channels/archive/nixos-19.03.tar.gz";
+fetchTarball "https://releases.nixos.org/nixos/19.03/nixos-19.03.172470.a177da6b86e/nixexprs.tar.xz";
   nixpkgs' = (import nixpkgs_source){};
 in with nixpkgs'.pkgs;
 let hp = haskellPackages.override{
@@ -13,10 +13,7 @@ let hp = haskellPackages.override{
         let f = import path;
             gatherDeps = { buildDepends ? [], libraryHaskellDepends ? [], executableHaskellDepends ? [], libraryToolDepends ? [], executableToolDepends ? [], ...}:
                buildDepends ++ libraryHaskellDepends ++ executableHaskellDepends ++ libraryToolDepends ++ executableToolDepends;
-            x = f (builtins.intersectAttrs (builtins.functionArgs f)
-                                               (ps // 
-                                                nixpkgs'.pkgs) # can also depend on non-haskell packages
-                   // {stdenv = stdenv; mkDerivation = gatherDeps;});
+            x = f (builtins.intersectAttrs (builtins.functionArgs f) ps // {stdenv = stdenv; mkDerivation = gatherDeps;});
         in x;
 ghc = hp.ghcWithPackages (ps: with ps; stdenv.lib.lists.subtractLists
 [typedflow]
