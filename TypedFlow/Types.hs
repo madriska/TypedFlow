@@ -104,7 +104,12 @@ type family Reverse' xs ys where
 type family Reverse xs where
   Reverse xs = Reverse' xs '[]
 
--- From: https://www.cs.ox.ac.uk/projects/utgp/school/andres.pdf
+-- | From: https://www.cs.ox.ac.uk/projects/utgp/school/andres.pdf
+-- 
+-- NP = "n-ary product", aka "environment", parameterized over:
+--   a type constructor         f  :: k -> *  , and
+--   a type-level _signature_   xs :: [k]
+-- 
 data NP f (xs :: [k]) where
   Unit :: NP f '[]
   (:*) :: f x -> NP f xs -> NP f (x ': xs)

@@ -54,6 +54,8 @@ data ModelOutput t predictionShape s =
               }
 
 -- | Several model outputs (for multitask models)
+-- F = flip, so      F (ModelOutput t) s
+--              =~=  \ps -> ModelOutput t ps s
 type ModelOutputs t ps s = NP (F (ModelOutput t) s) ps
 
 type OneOutput t p s = ModelOutputs t '[ p ] s
@@ -76,10 +78,7 @@ modelBoth (ModelOutput y1 l1 c1 n1) (ModelOutput y2 l2 c2 _) = ModelOutput arst 
           arst = zipWithTT @s @'[p] @'[q] concat0 y1 y2
 
 -- | First type argument is the number of classes.  @categorical
--- logits gold@ return (prediction, accuraccy, loss)
-
-
-
+-- logits gold@ return (prediction, accuracy, loss)
 sparseCategorical :: forall nCat. KnownNat nCat => Model '[nCat] Float32 '[] '[] '[] Int32
 sparseCategorical logits y =
   let y_ = argmax0 logits
@@ -90,7 +89,7 @@ sparseCategorical logits y =
   in singleModel (ModelOutput{..})
 
 -- | First type argument is the number of classes.  @categorical
--- logits gold@ return (prediction, accuraccy, loss)
+-- logits gold@ return (prediction, accuracy, loss)
 sparseCategoricalDensePredictions :: forall nCat. KnownNat nCat
   => Tensor '[nCat] Float32
   -> Tensor '[] Int32
@@ -107,7 +106,7 @@ sparseCategoricalDensePredictions logits y =
 
 -- | First type argument is the number of classes.
 -- @categoricalDistribution logits gold@ return (prediction,
--- accuraccy, loss) accuracy is reported as predicting the same class
+-- accuracy, loss) accuracy is reported as predicting the same class
 -- as the input 'winning' class.
 categoricalDistribution :: forall nCat. KnownNat nCat => Model '[nCat] Float32 '[nCat] '[nCat] '[] Float32
 categoricalDistribution logits y = singleModel
@@ -125,9 +124,11 @@ categoricalDistribution logits y = singleModel
 --
 -- Note that the accuracy is computed by multiplying the accuracies at
 -- individual time steps with the targetWeights.
-
-timedCategorical :: forall len nCat bits. KnownNat nCat => KnownNat len => KnownBits bits =>
-  Tensor '[len] (Flt bits) -> Tensor '[len,nCat] (Flt bits) -> Tensor '[len] Int32 -> ModelOutputs  (Flt bits) '[ '[len,nCat]] '[]
+timedCategorical :: forall len nCat bits. KnownNat nCat => KnownNat len => KnownBits bits
+  => Tensor '[len] (Flt bits)
+  -> Tensor '[len,nCat] (Flt bits)
+  -> Tensor '[len] Int32
+  -> ModelOutputs  (Flt bits) '[ '[len,nCat]] '[]
 timedCategorical targetWeights logits y =
   let y_ :: Tensor '[len] Int32
       y_ = argmax1 logits

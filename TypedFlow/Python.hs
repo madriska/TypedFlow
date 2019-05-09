@@ -128,6 +128,7 @@ gen s = modify $ \PyState{..} -> PyState {genText=genText $$ s,..}
 setGen :: DOC -> Python ()
 setGen d = modify $ \PyState{..} -> PyState {genText=d,..}
 
+-- | Output an assignment statement assigning "y" to "x".
 (<--) :: Ref s t -> UntypedExpression -> Python ()
 x <-- y = gen (pyVarRepr x <> text "=" <>  y)
 
@@ -443,6 +444,7 @@ untypedExprs :: All KnownShape xs => KnownTyp t =>  HTV t xs -> Python [DOC]
 untypedExprs Unit = return []
 untypedExprs (F x :* xs) = (:) <$> generatePure x <*> untypedExprs xs
 
+-- | Pretty-print a Haskell type into a "DOC".
 pretty :: forall t. KnownTyp t => HaskType t -> DOC
 pretty = case kindVal @(TypKind t) of
   SInt -> case bitsVal @(TypBits t) of
@@ -453,6 +455,7 @@ pretty = case kindVal @(TypKind t) of
     SB32 -> float
     SB64 -> double
 
+-- | State of the Python code being generated.
 data PyState = PyState {genText :: DOC
                        ,genPureTable :: SSNMap2 Shape Typ T DOC
                        -- ^ Table mapping pointers to their
