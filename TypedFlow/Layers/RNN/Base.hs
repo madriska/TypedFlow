@@ -51,14 +51,17 @@ module TypedFlow.Layers.RNN.Base (
   iterateCell,
   iterateCellBackward,
   iterateWithCull,
+  iterateBackwardsWithCull,
   -- * Monad-like interface for cell construction
   Component(..), bindC, returnC,
-  -- rnnBackwardsWithCull,
   )
 
 where
 import Prelude hiding (tanh,Num(..),Floating(..),floor)
+import Prelude ((-))
+import Data.Proxy
 import GHC.TypeLits
+import TypedFlow.Abstract (scalar)
 import TypedFlow.TF
 import TypedFlow.Types
 import TypedFlow.Types.Proofs
@@ -247,13 +250,12 @@ chainForwardWithState f (s0 , (x:**xs)) =
   in ((x':**xs'), (s1:**ss) )
 
 -- -- | RNN helper
--- chainBackwardWithState ::
---   ∀ state a b n. ((state , a) -> (state , b)) → (state , V n a) -> (state , V n b, V n state)
--- chainBackwardWithState _ (s0 , VUnit) = return (s0 , VUnit, VUnit)
--- chainBackwardWithState f (s0 , (x:**xs)) = do
---   (s1,xs',ss') <- chainBackwardWithState f (s0,xs)
---   (sFin, x') <- f (s1,x)
---   return (sFin,(x':**xs'),(sFin:**ss'))
+chainBackwardWithState :: ∀ state a b n. ((state , a) -> (state , b)) → (state , V n a) -> (state, V n b, V n state)
+chainBackwardWithState _ (s0 , VUnit) = (s0 , VUnit, VUnit)
+chainBackwardWithState f (s0 , (x:**xs)) =
+  let (s1,xs',ss') = chainBackwardWithState f (s0,xs)
+      (sFin, x') = f (s1,x)
+  in (sFin, (x':**xs'), (sFin:**ss'))
 
 -- | RNN helper
 transposeV :: forall n xs t. All KnownShape xs => KnownNat n =>
@@ -286,11 +288,14 @@ iterateWithCull dynLen cell xs = C $ \s0 ->
       sss = transposeV @n (typeSList @ls) ss
   in (gathers @n (typeSList @ls) dynLen sss,us)
 
--- -- | Like @rnnWithCull@, but states are threaded backwards.
--- rnnBackwardsWithCull :: forall n bs x y ls b.
---   KnownLen ls => KnownNat n => All KnownLen ls => All (LastEqual bs) ls =>
---   T '[bs] Int32 -> RnnCell b ls x y -> RNN n b ls x y
--- rnnBackwardsWithCull dynLen cell (s0, t) = do
---   (us,ss) <- chainBackwardWithState cell (s0,xs)
---   let sss = transposeV @n (shapeSList @ls) ss
---   return (gathers @n (shapeSList @ls) (n - dynLen) sss,us)
+-- | Like @iterateWithCull@, but states are threaded backwards.
+iterateBackwardsWithCull :: forall n x y ls b.
+  KnownLen ls => KnownNat n => All KnownShape ls =>
+  T '[] Int32
+  -> RnnCell b ls x y -> Rnn n b ls x y
+iterateBackwardsWithCull dynLen cell xs = C $ \s0 ->
+  let (_, us,ss) = chainBackwardWithState (uncurry (flip (runC . cell))) (s0,xs)
+      sss = transposeV @n (typeSList @ls) ss
+      n :: T '[] Int32
+      n = scalar . fromIntegral $ natVal (Proxy @n)
+  in (gathers @n (typeSList @ls) (n - dynLen) sss,us)
