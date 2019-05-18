@@ -61,6 +61,8 @@ module TypedFlow.TF (
   -- ** Indexwise binary operators
   addN, (⊕), (⊝), (⊙), (⊘), equal,
   minT, maxT,
+  -- ** Broadcasting
+  broadcastT, broadcastTT,
   -- ** Products
   (∙), (·), matmul,
   -- ** Reducers
