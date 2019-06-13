@@ -103,6 +103,10 @@ showSShape s = showShape' (shapeToList' s)
 showShapeType :: ∀ (s :: Shape). KnownShape s => DOC
 showShapeType = showSShape (typeSShape @s)
 
+showShapeTypeAssert :: ∀ (s :: Shape) t. KnownShape s => Ref s t -> DOC
+showShapeTypeAssert ref =
+  "assert " <> pyVarRepr ref <> ".shape.as_list() == " <> showShapeType @s
+
 -- | Show a shape, but "None" is replaced by "-1"
 showShapeMinus :: forall (s::Shape) proxy. All KnownNat s => SList' proxy s -> DOC
 showShapeMinus s = list (map (showDim' "-1") (shapeToList'' s))
@@ -142,8 +146,9 @@ cache x = do
     Just y -> return y
     Nothing -> do
       v <- newPyVar @s @t
-      gen ("#" <> (showShapeType @s))
+
       v <-- x
+      gen (showShapeTypeAssert @s v)
       modify $ (\g -> g {genAssignTable = M.insert x' (pyVarRepr v) (genAssignTable g)})
       return (pyVarRepr v)
 
@@ -287,7 +292,7 @@ generatePure' rec sR = knownSShape sR ?> \case
     recx <- rec (s0 .+. (:*) a ((:*) b Unit)) x
     recy <- rec (s0 .+. (:*) b ((:*) c Unit)) y
     return (funcall "tf.matmul" [recx, recy])
-  BinOp operation s0 s1 _ s2 _ x y -> do
+  BinOp operation s0 s1 _ s2 tt x y -> do
    recx <- rec (s0 .+. s1) x
    recy <- rec (s0 .+. s2) y
    return $ case operation of
@@ -315,11 +320,11 @@ generatePure' rec sR = knownSShape sR ?> \case
     return (funcall "tf.concat" [list rxs, text "axis=" <> integer (sListLength s0)])
   Transpose s p x -> do
     rx <- rec s x
-    return (func "tf.transpose" [rx] [("perm",list (map (integer . permToFun p) [0.. sListLength s]))])
+    return (func "tf.transpose" [rx] [("perm",list (map (integer . permToFun p) [0..sListLength s-1]))])
   Gather indexShape s0 m s1 x ix -> do
     rx <- rec (s0 .+. ((:*) m s1)) x
     rix <- rec indexShape ix
-    return (func "tf.gather" [rx, rix] [])
+    return (func "tf.gather" [rx, rix] []) -- TODO this is generating something wrong...?
   GatherND containerShape elementShape indexShape x ix -> do
     rx <- rec (containerShape .+. elementShape) x
     rix <- rec (indexShape *: (sListLenAsNat containerShape)) ix
