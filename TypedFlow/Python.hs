@@ -386,20 +386,20 @@ grad :: UntypedExpression -> UntypedExpression -> UntypedExpression
 grad y vars = funcall "tf.gradients" [y, vars]
 
 -- | Batchify and compile a model with simple input to output mapping.
-compile :: forall batchSize sx tx sy ty sy_ ty_ p
-        .  (KnownNat batchSize, KnownShape sx, KnownTyp tx, KnownShape sy, KnownTyp ty, KnownShape sy_, KnownTyp ty_, All KnownShape p, KnownLen p)
+compile :: forall ms batchSize sx tx sy ty sy_ ty_ p
+        .  (KnownShape ms, KnownNat batchSize, KnownShape sx, KnownTyp tx, KnownShape sy, KnownTyp ty, KnownShape sy_, KnownTyp ty_, All KnownShape p, KnownLen p)
         => Options
-        -> Gen (Tensor sx tx -> Tensor sy ty -> ModelOutputs  ty_ p sy_)
+        -> Gen (Tensor sx tx -> Tensor sy ty -> ModelOutputs ms ty_ p sy_)
         -> Python ()
-compile options fGen = compileGen @batchSize options (simpleModel <$> fGen)
+compile options fGen = compileGen @ms @batchSize options (simpleModel <$> fGen)
 
 -- | Batchify and compile a model with generic  input to output mapping and states
-compileGen :: forall batchSize shapesAndTypes sy_ ty_ ps stateShapes.
-           (KnownNat batchSize, All KnownPlaceholder shapesAndTypes, KnownLen stateShapes,
+compileGen :: forall ms batchSize shapesAndTypes sy_ ty_ ps stateShapes.
+           (KnownShape ms, KnownNat batchSize, All KnownPlaceholder shapesAndTypes, KnownLen stateShapes,
             KnownLen shapesAndTypes,
             All KnownShape stateShapes, KnownShape sy_, KnownTyp ty_, All KnownShape ps, KnownLen ps)
          => Options
-         -> Gen (Placeholders shapesAndTypes -> HTV ty_ stateShapes -> StateAndOutputs ty_ ps (sy_ ': stateShapes))
+         -> Gen (Placeholders shapesAndTypes -> HTV ty_ stateShapes -> StateAndOutputs ms ty_ ps (sy_ ': stateShapes))
          -> Python ()
 compileGen options fGen =
   let batchedShapesKnown = mapFMap @(Cons batchSize) knownCons (allKnown @KnownShape @stateShapes typeSList)

@@ -111,7 +111,7 @@ def initialize_params (session,model):
     session.run(tf.local_variables_initializer())
     session.run(tf.global_variables_initializer())
 
-def train (session, model,
+def train (session, model, empty_metrics,
            train_generator=bilist_generator(([],[])),
            valid_generator=bilist_generator(([],[])),
            epochs=100,
@@ -137,12 +137,12 @@ def train (session, model,
     This function returns a list of epoch entries. Each entry is a dictionary with:
      - "epoch": current epoch
      - "val" and "train": dictionaries with
-        - "loss", "accuracy", "error_rate", time", "start_time", "end_time"
+        - "loss", "metrics", "time", "start_time", "end_time"
     '''
     batch_size = model["batch_size"]
     stats = []
     def halfEpoch(isTraining):
-        totalAccur = 0
+        totalMetrics = empty_metrics.copy()
         totalLoss = 0
         n = 0
         print ("Training" if isTraining else "Validation", end="")
@@ -151,24 +151,24 @@ def train (session, model,
             print(".",end="")
             sys.stdout.flush()
             maybeTrain = [model[modelPrefix+"train"]] if isTraining else []
-            results = session.run([model[modelPrefix+"loss"],model[modelPrefix+"accuracy"]] + maybeTrain + extraVectors + [model["update"]],
+            results = session.run([model[modelPrefix+"loss"],model[modelPrefix+"metrics"]] + maybeTrain + extraVectors + [model["update"]],
                                   feed_dict=dict([(model["training_phase"],isTraining)] +
                                                  [(model[k],inputs[k]) for k in inputs]))
             loss = results[0]
-            accur = results[1]
+            metrics = results[1]
             n+=1
             totalLoss += loss
-            totalAccur += accur
+            for i, m in enumerate(metrics):
+                totalMetrics[i] += m
         end_time = time()
         if n > 0:
             avgLoss = totalLoss / float(n)
-            avgAccur = totalAccur / float(n)
             print(".")
-            print ("Time=%.1f" % (end_time - start_time), "loss=%g" % avgLoss, "accuracy=%.3f" % avgAccur)
-            return {"loss":avgLoss,"accuracy":avgAccur,"time":(end_time - start_time),"error_rate":1-avgAccur,"start_time":start_time}
+            print ("Time=%.1f" % (end_time - start_time), "loss=%g" % avgLoss, "metrics=%s" % totalMetrics)
+            return {"loss":avgLoss,"metrics":totalMetrics,"time":(end_time - start_time),"start_time":start_time}
         else:
             print ("No data")
-            return {"loss":0,"accur":0,"time":0,"error_rate":0,"start_time":0}
+            return {"loss":0,"metrics":[],"time":0,"start_time":0}
 
     for e in range(epochs):
         print ("Epoch {0}/{1}".format(e, epochs))
@@ -195,13 +195,6 @@ def StopWhenValidationGetsWorse(patience = 1):
         if p <= 0:
             return True
         return False
-    return callback
-
-def StopWhenAccurate(phase="val",error_rate = 0.01):
-    '''Return a callback which stops training if error rate drops below 1%'''
-    def callback(values):
-        nonlocal error_rate
-        return values[phase]["error_rate"] < error_rate
     return callback
 
 def Every(n,f):
