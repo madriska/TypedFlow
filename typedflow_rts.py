@@ -158,8 +158,7 @@ def train (session, model, empty_metrics,
             metrics = results[1]
             n+=1
             totalLoss += loss
-            for i, m in enumerate(metrics):
-                totalMetrics[i] += m
+            totalMetrics += metrics
         end_time = time()
         if n > 0:
             avgLoss = totalLoss / float(n)
