@@ -71,6 +71,8 @@ module TypedFlow.TF (
   -- argmax,
   argmax0, argmax1,
   softmax0, softmax1,
+  -- ** Batch Normalization
+  batchNorm,
   -- ** Gradients
   -- grad,
   -- clipByGlobalNorm,

@@ -347,6 +347,9 @@ generatePure' rec sR = knownSShape sR ?> \case
   Softmax _ _ x -> do
      rx <- rec typeSShape x
      return $ func "tf.nn.softmax" [rx] [("axis","1")]
+  BatchNorm x -> do
+     rx <- rec typeSShape x
+     return $ func "tf.keras.layers.BatchNormalization(axis=1)" [rx] []
 
 type Python a = StateT PyState (State GState) a
 

@@ -163,7 +163,7 @@ def train (session, model, empty_metrics,
         if n > 0:
             avgLoss = totalLoss / float(n)
             print(".")
-            print ("Time=%.1f" % (end_time - start_time), "loss=%g" % avgLoss, "metrics=%s" % totalMetrics)
+            print ("Time=%.1f" % (end_time - start_time), "loss=%g" % avgLoss)
             return {"loss":avgLoss,"metrics":totalMetrics,"time":(end_time - start_time),"start_time":start_time}
         else:
             print ("No data")

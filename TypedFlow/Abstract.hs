@@ -70,6 +70,7 @@ broadcast u varyNoise n x = result
 protoFinished :: Unique -> Bool -> (forall s' t'. T s' t' -> Bool) -> T s t -> Bool
 protoFinished u varyNoise rec = \case
   Softmax _ _ x -> rec x
+  BatchNorm x -> rec x
   DirectBroadcast _ _ _ _ x -> rec x
   GatherND _ _ _ x y -> rec x && rec y
   Noise _ _ _ _ -> not varyNoise
@@ -178,6 +179,8 @@ protoBroadcast u varyNoise n@(Sat) rec finished ty s tensor
   | finished tensor = simpleBC
   | otherwise = knownTyp ty $ case tensor of
   Softmax bs@Sat m@Sat x -> prodAssocS n bs m #> reshapeAuto (Softmax (satMul n bs) m ((reshapeAuto (rec (typeSShape) x))))
+  -- TODO check myself vs. wreck myself
+  BatchNorm x -> BatchNorm (rec s x)
   DirectBroadcast s0 s1 s2 s3 x -> DirectBroadcast (n :* s0) s1 s2 s3 (rec (s0 .+. s2) x)
   GatherND cs es is x ix
     | finished x -> GatherND cs es (n :* is) x (rec (is *: sListLenAsNat cs) ix)
@@ -778,6 +781,9 @@ softmaxCrossEntropyWithLogits  =
   BinOp SoftmaxCrossEntropyWithLogits
   Unit (typeSShape @ '[numClasses]) typeSTyp (typeSShape @ '[numClasses]) typeSTyp
 
+batchNorm :: forall s w. (KnownShape s, KnownBits w)
+          => T s (Flt w) -> T s (Flt w)
+batchNorm = BatchNorm
 
 -- | Computes sigmoid cross entropy given logits. Measures the
 -- probability error in discrete classification tasks in which each

@@ -679,6 +679,7 @@ data T (s :: Shape) (t :: Typ) where
             -> T (bs ': outSpatial ++ '[numChannels]) t
   Softmax :: Sat KnownNat bs -> Sat KnownNat n -> T '[bs,n] (Flt w) -> T '[bs,n] (Flt w)
     -- yes, softmax is shape-fixed: https://www.tensorflow.org/api_docs/cc/class/tensorflow/ops/softmax
+  BatchNorm :: T s (Flt w) -> T s (flt w)
 
 instance Show Unique where
   show _ = "<Unique>"
