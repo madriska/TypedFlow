@@ -163,6 +163,13 @@ newPyVar = do
 pyVarRepr :: Ref s t -> DOC
 pyVarRepr (Ref n _ _) = text ("var" <> show n)
 
+pyLitRepr :: forall s t. KnownTyp t => LiteralTensor s t -> DOC
+pyLitRepr (LitA1 xs) = funcall "tf.convert_to_tensor" [pyArrayOf (pretty @t) xs]
+pyLitRepr (LitA2 xss) = funcall "tf.convert_to_tensor" [pyArrayOf (pyArrayOf (pretty @t)) xss]
+
+pyArrayOf :: (a -> DOC) -> [a] -> DOC
+pyArrayOf f = brackets . sep . punctuate comma . map f
+
 tuple :: [DOC] -> DOC
 tuple = parens . sep . punctuate comma
 
@@ -251,6 +258,7 @@ generatePure' rec sR = knownSShape sR ?> \case
   T op -> return $ case op of
     Variable v -> pyVarRepr v
     (Constant c) -> funcall "tf.constant" [pretty @t c, named "shape" (showSShape sR), named "dtype" (showTyp @t)]
+    (Literal t) -> pyLitRepr t
     (Range n@Sat) -> (func "tf.range" [] [("start",integer 0),
                                ("limit",integer (natVal n)),
                                ("dtype",showTyp @t)])

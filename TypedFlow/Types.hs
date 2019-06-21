@@ -641,9 +641,15 @@ data Distribution (s :: Shape) (t :: Typ) where
 
 data Ref s t = Ref Int (SShape s) (STyp t)
 
+data LiteralTensor (s :: Shape) (t :: Typ) where
+  LitA1 :: [HaskType t] -> LiteralTensor '[n] t
+  LitA2 :: [[HaskType t]] -> LiteralTensor '[m, n] t
+  -- TODO
+
 data NilOp s t where
   Variable :: Ref s t -> NilOp s t
   Constant :: HaskType t -> NilOp '[] t
+  Literal :: LiteralTensor s t -> NilOp s t
   Range :: KnownBits w => Sat KnownNat n -> NilOp '[n] ('Typ 'Int w)
 
 data Catable s1 s2 t n = Catable (Sat KnownNat n) (T (s1 ++ (n ': s2)) t)

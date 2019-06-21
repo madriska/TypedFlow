@@ -316,6 +316,13 @@ constant c = appRUnit @s #> broadcastTT @s (scalar c)
 scalar :: forall t w. KnownBits w => KnownKind t => HaskType ('Typ t w) -> Scalar ('Typ t w)
 scalar = T . Constant
 
+-- TODO use type classes or families to generalize these lits once I have time
+literalArray1 :: [HaskType t] -> T '[n] t
+literalArray1 = T . Literal . LitA1
+
+literalArray2 :: [[HaskType t]] -> T '[m, n] t
+literalArray2 = T . Literal . LitA2
+
 reduceAll :: forall s t. KnownTyp t => KnownShape s =>
      (∀n s'. (KnownTyp t,KnownShape s') => Axis n s' -> T s' t -> T (Take n s' ++ Drop ('Succ n) s') t) -> Tensor s t -> Tensor '[] t
 reduceAll op x = knownProduct @s ?>

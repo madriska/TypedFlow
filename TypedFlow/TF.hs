@@ -56,6 +56,8 @@ module TypedFlow.TF (
   ones,
   eye,
   constant,
+  literalArray1,
+  literalArray2,
   -- ** indexwise unary operators
   round, sigmoid, relu, floor, square,
   -- ** Indexwise binary operators
