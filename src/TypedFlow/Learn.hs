@@ -54,12 +54,14 @@ data ModelOutput metricsShape t predictionShape s =
               ,modelName :: String
               }
 
+type AccuracyShape = '[2] -- correct, total
+type ConfusionMatrixShape = '[4] -- TP, TN, FP, FN
+
 -- | Several model outputs (for multitask models)
 -- F = flip, so      F (ModelOutput ms t) s
 --              =~=  \p -> ModelOutput ms t p s
 type ModelOutputs ms t ps s = NP (F (ModelOutput ms t) s) ps
 
--- TODO how does the full metrics shape interact with these various permutations?
 type OneOutput ms t p s = ModelOutputs ms t '[ p ] s
 
 singleModel :: ModelOutput ms t p s -> ModelOutputs ms t '[ p ] s
@@ -73,6 +75,7 @@ singleModel m = F m :* Unit
 type Model ms input tIn g p output tOut
   = T input tIn -> T (g++output) tOut -> OneOutput ms tOut p output
 
+-- TODO right now we only support combining metrics homogenously (+ additively)
 modelBoth :: forall ms p q s t.
     KnownShape s => KnownShape ms => KnownTyp t => KnownNat q => KnownNat p => ModelOutput ms t '[p] s -> ModelOutput ms t '[q] s -> ModelOutput ms t '[p + q] s
 modelBoth (ModelOutput y1 l1 c1 n1) (ModelOutput y2 l2 c2 _) =
@@ -111,13 +114,20 @@ sparseCategoricalDensePredictions logits y =
 -- @categoricalDistribution logits gold@ return (prediction,
 -- accuracy, loss) accuracy is reported as predicting the same class
 -- as the input 'winning' class.
-categoricalDistribution :: forall nCat. KnownNat nCat => Model '[] '[nCat] Float32 '[nCat] '[nCat] '[] Float32
+categoricalDistribution :: forall nCat. KnownNat nCat => Model AccuracyShape '[nCat] Float32 '[nCat] '[nCat] '[] Float32
 categoricalDistribution logits y = singleModel
   ModelOutput{modelY = softmax0 logits
-             ,modelMetrics = cast (equal (argmax0 @'B32 logits) (argmax0 y))
+             ,modelMetrics = (reshape @'[1] $ cast (equal (argmax0 @'B32 logits) (argmax0 y)))
+                    `concat0` 1 -- each sample gets 1 denominator point
              ,modelLoss = softmaxCrossEntropyWithLogits y logits
              ,modelName = ""
              }
+
+-- | Specialization of 'categoricalDistribution' with two categories
+-- (positive | negative). Under the assumption that the labels are in
+-- that order, computes a confusion matrix as the metric.
+-- binaryCategoricalDistribution :: Model ConfusionMatrixShape '[2] Float32 '[2] '[2] '[] Float32
+-- binaryCategoricalDistribution = _
 
 -- | @timedCategorical targetWeights logits y@
 --

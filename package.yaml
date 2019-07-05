@@ -34,9 +34,9 @@ when:
   - condition: flag(tensorflow)
     dependencies:
       - tensorflow
-source-dirs:
-  - .
 library:
+  source-dirs:
+    - src
   exposed-modules:
     - TypedFlow
     - TypedFlow.Layers
@@ -60,6 +60,24 @@ flags:
     # If the build fails with tensorflow=False, don't retry with tensorflow=True
     manual: False
     default: False
+tests:
+  typedflow-spec:
+    source-dirs: spec
+    main: Spec.hs
+    dependencies:
+      # TODO these are just to get a spec suite working. Replace with
+      # a smaller dependency footprint. text is pulled in bc of NI.
+      - neat-interpolation
+      - text
+
+      - process
+      - tasty
+      - tasty-discover
+      - tasty-golden
+      - tasty-hspec
+      - tasty-smallcheck
+      - template-haskell
+      - typedflow
 # executables:
   # typedflow-agreement:
   #   source-dirs: examples/agreement

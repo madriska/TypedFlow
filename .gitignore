@@ -9,6 +9,7 @@ cabal-dev
 *.chs.h
 *.dyn_o
 *.dyn_hi
+*.pyc
 .hpc
 .hsenv
 .cabal-sandbox/

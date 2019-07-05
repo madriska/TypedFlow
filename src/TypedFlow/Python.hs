@@ -36,7 +36,7 @@ Stability   : experimental
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 
-module TypedFlow.Python (compile, compileGen, generateFile) where
+module TypedFlow.Python (compile, compileFn, compileGen, generateFile) where
 
 import Data.Char (toLower)
 import Data.Proxy
@@ -450,6 +450,18 @@ compileAlreadyBatched Options{..} models = do
     peeks <- mapM paramToPeek =<< lift (gets genPeeks)
     let peeks2 = [("batch_size", (showDim @ bs))]
     gen (text "return " <> dict (peeks2 ++ peeks ++peeks3))
+
+compileFn :: (All KnownPair ps, KnownShape s, KnownTyp t) => String -> HHTV ps -> Gen (T s t) -> Python ()
+compileFn name args body = do
+  arglist <- renderArgs args
+  genFun name arglist $ do
+    result <- interpGen body
+    retval <- generatePure result
+    gen (text "return " <> retval)
+
+renderArgs :: All KnownPair xs => HHTV xs -> Python [DOC]
+renderArgs Unit = return []
+renderArgs (Uncurry x :* xs) = (:) <$> pure "_" <*> renderArgs xs
 
 paramToPeek :: VarInfo -> Python (String,UntypedExpression)
 paramToPeek (VarInfo name s t x) = do
