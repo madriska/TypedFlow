@@ -55,8 +55,8 @@ data ModelOutput metricsShape t predictionShape s =
               }
 
 -- | Several model outputs (for multitask models)
--- F = flip, so      F (ModelOutput t) s
---              =~=  \ps -> ModelOutput t ps s
+-- F = flip, so      F (ModelOutput ms t) s
+--              =~=  \p -> ModelOutput ms t p s
 type ModelOutputs ms t ps s = NP (F (ModelOutput ms t) s) ps
 
 -- TODO how does the full metrics shape interact with these various permutations?

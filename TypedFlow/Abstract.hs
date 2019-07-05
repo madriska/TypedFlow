@@ -474,7 +474,6 @@ slice0 :: forall i j m s t. KnownShape s => KnownNat m => KnownTyp t => KnownNat
          Tensor (m ': s) t -> Tensor ((j-i) ': s) t
 slice0 = slice @i @j axis0
 
-
 -- MAYBE: drop these combinators and use zipWithT instead?
 -- | Concatenate tensors with explicit shapes. Recommended: use @zipWithTT (concat0 ...)@ instead.
 concatT' :: ∀ s0 d1 d2 s1 t. KnownTyp t =>
@@ -860,10 +859,15 @@ if_ = If -- FIXME: part of the workaround for https://github.com/tensorflow/tens
 
 -- | @(gather x ix)[k] = x[ix[k]]@. See https://www.tensorflow.org/api_docs/python/tf/gather
 gather :: forall n indexShape s t. KnownShape s => KnownNat n => KnownShape indexShape => T (n ': s) t -> T indexShape Int32 -> T (indexShape ++ s) t
-gather = Gather typeSShape Unit (natSat @n) typeSShape
--- gather params ix = GatherND (typeSShape @'[n]) (typeSShape @s) (typeSShape @indexShape) params $
---   prodHomo @indexShape @'[1] $
---   (reshapeAuto ix)
+-- gather = Gather typeSShape Unit (natSat @n) typeSShape
+gather params ix =
+  -- Discharge some proofs...
+  knownAppend @indexShape @'[1] ?>
+  knownProduct @(indexShape ++ '[1]) ?>
+  prodHomo @indexShape @'[1] #>
+  -- here's our actual value.
+  GatherND @'B32 (typeSShape @'[n]) (typeSShape @s) (typeSShape @indexShape) params $
+    reshape @(indexShape ++ '[1]) @indexShape @Int32 ix
 
 -- | @(lookup i xs) = xs[i]@. This function returns an element of a
 -- tensor at a dynamic index. This is a version of 'gather'
