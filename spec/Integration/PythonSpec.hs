@@ -28,10 +28,8 @@ spec_characterization = parallel $ do
           w3 <- parameterDefault "w3"
 
           return $ \input gold ->
-            input & dense @100 w1
-                  & relu
-                  & dense @100 w2
-                  & relu
+            input & dense @10 w1 & batchNorm & relu
+                  & dense @10 w2 & batchNorm & relu
                   & dense @2 w3
                   & (`categoricalDistribution` gold)
         pythonFile = "spec/generated/sorted_classifier_tyf.py"
@@ -52,7 +50,7 @@ spec_characterization = parallel $ do
           for _ in range(bs):
             if random.random() < 0.5:
               # positive examples
-              v = [random.uniform(0, 100) for _ in range(5)]
+              v = [random.uniform(-10000, 10000) for _ in range(5)]
               xs.append(sorted(v))
               ys.append([1.0, 0.0])
             else:
