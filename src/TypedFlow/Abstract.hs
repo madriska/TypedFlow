@@ -317,10 +317,10 @@ scalar :: forall t w. KnownBits w => KnownKind t => HaskType ('Typ t w) -> Scala
 scalar = T . Constant
 
 -- TODO use type classes or families to generalize these lits once I have time
-literalArray1 :: [HaskType t] -> T '[n] t
+literalArray1 :: forall n t. [HaskType t] -> T '[n] t
 literalArray1 = T . Literal . LitA1
 
-literalArray2 :: [[HaskType t]] -> T '[m, n] t
+literalArray2 :: forall m n t. [[HaskType t]] -> T '[m, n] t
 literalArray2 = T . Literal . LitA2
 
 reduceAll :: forall s t. KnownTyp t => KnownShape s =>
