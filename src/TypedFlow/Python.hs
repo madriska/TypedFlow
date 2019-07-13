@@ -165,7 +165,11 @@ pyVarRepr (Ref n _ _) = text ("var" <> show n)
 
 pyLitRepr :: forall s t. KnownTyp t => LiteralTensor s t -> DOC
 pyLitRepr (LitA1 xs) = funcall "tf.convert_to_tensor" [pyArrayOf (pretty @t) xs]
-pyLitRepr (LitA2 xss) = funcall "tf.convert_to_tensor" [pyArrayOf (pyArrayOf (pretty @t)) xss]
+pyLitRepr (LitA2 xss) =
+  funcall "tf.reshape"
+    [ funcall "tf.convert_to_tensor" [pyArrayOf (pyArrayOf (pretty @t)) xss]
+    , showShapeMinus (typeSShape @s)
+    ]
 
 pyArrayOf :: (a -> DOC) -> [a] -> DOC
 pyArrayOf f = brackets . sep . punctuate comma . map f

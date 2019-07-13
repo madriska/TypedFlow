@@ -642,8 +642,8 @@ data Distribution (s :: Shape) (t :: Typ) where
 data Ref s t = Ref Int (SShape s) (STyp t)
 
 data LiteralTensor (s :: Shape) (t :: Typ) where
-  LitA1 :: [HaskType t] -> LiteralTensor '[n] t
-  LitA2 :: [[HaskType t]] -> LiteralTensor '[m, n] t
+  LitA1 :: (KnownNat n) => [HaskType t] -> LiteralTensor '[n] t
+  LitA2 :: (KnownNat m, KnownNat n) => [[HaskType t]] -> LiteralTensor '[m, n] t
   -- TODO
 
 data NilOp s t where
