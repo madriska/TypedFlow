@@ -330,6 +330,14 @@ infixr 5 :**
 
 deriving instance (Functor (V n))
 
+instance Foldable (V n) where
+  foldr _ i VUnit = i
+  foldr f i (x :** xs) = x `f` foldr f i xs
+
+instance Traversable (V n) where
+  traverse f VUnit = pure VUnit
+  traverse f (x :** xs) = (:**) <$> f x <*> traverse f xs
+
 instance KnownNat n => Applicative (V n) where
   pure x = fmap (const x) (vcount @n)
   VUnit <*> VUnit = VUnit
