@@ -86,6 +86,7 @@ module TypedFlow.TF (
   litStack0,
   stack0, unstack0,
   stack1,
+  stackN,
   concatT, concat0, concat1,
   consT0, snocT0, tailT0, initT0,
   -- ** Reshaping

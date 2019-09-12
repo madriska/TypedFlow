@@ -26,6 +26,8 @@ license: LGPL-3
 git: git@github.com:GU-CLASP/TypedFlow.git
 dependencies:
   - base ==4.*
+  - bytestring
+  - file-embed
   - ghc-typelits-knownnat
   - pretty-compact
   - mtl

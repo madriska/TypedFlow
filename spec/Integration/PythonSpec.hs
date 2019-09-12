@@ -16,8 +16,9 @@ import Test.Tasty.SmallCheck
 (&) = flip ($) -- TODO
 
 spec_characterization :: Spec
-spec_characterization = parallel $ do
+spec_characterization = do
   -- TODO break apart, simplify
+  -- TODO GAN
   it "compiles and trains a simple classifier: 'is the input sorted?'" $ do
     -- Input: T '[5] Float32
     -- Output: T '[2] Float32 (sorted | not sorted)
@@ -28,8 +29,8 @@ spec_characterization = parallel $ do
           w3 <- parameterDefault "w3"
 
           return $ \input gold ->
-            input & dense @10 w1 & batchNorm & relu
-                  & dense @10 w2 & batchNorm & relu
+            input & dense @100 w1 & batchNorm & relu
+                  & dense @100 w2 & batchNorm & relu
                   & dense @2 w3
                   & (`categoricalDistribution` gold)
         pythonFile = "spec/generated/sorted_classifier_tyf.py"
@@ -57,7 +58,7 @@ spec_characterization = parallel $ do
               # negative examples
               v = None
               while True:
-                v = [random.uniform(0, 100) for _ in range(5)]
+                v = [random.uniform(-10000, 10000) for _ in range(5)]
                 if list(v) != list(sorted(v)):
                   break
               xs.append(v)
@@ -65,10 +66,10 @@ spec_characterization = parallel $ do
           yield {"x": xs, "y": ys}
 
       sess = tf.Session()
-      model = mkModel(optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
+      model = mkModel(optimizer=tf.train.AdamOptimizer(learning_rate=0.1))
       tyf.initialize_params(sess, model)
       # TODO the shape should be injected automatically here
-      stats = tyf.train(sess, model, np.array([0.,0.]), dataGenerator)
+      stats = tyf.train(sess, model, np.array([0.,0.]), dataGenerator, callbacks=[print])
 
       correct, total = stats[-1]['train']['metrics']
       acc = correct / total

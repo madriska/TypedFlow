@@ -5,22 +5,23 @@ def mkModel(optimizer=tf.train.AdamOptimizer()):
   var0=tf.placeholder(tf.bool, shape=[], name="training_phase")
   var1=tf.placeholder(tf.float32, shape=[100,5], name="x")
   var2=tf.placeholder(tf.float32, shape=[100,2], name="y")
-  var5=tf.random_uniform([5,10], minval=-0.6324555, maxval=0.6324555, dtype=tf.float32) # 3
-  assert var5.shape.as_list() == [5,10]
+  var5=tf.random_uniform(
+         [5,100], minval=-0.23904572, maxval=0.23904572, dtype=tf.float32) # 3
+  assert var5.shape.as_list() == [5,100]
   var6=tf.Variable(var5, name="w1_w", trainable=True)
-  var7=tf.truncated_normal([10], stddev=0.1, dtype=tf.float32) # 4
-  assert var7.shape.as_list() == [10]
+  var7=tf.truncated_normal([100], stddev=0.1, dtype=tf.float32) # 4
+  assert var7.shape.as_list() == [100]
   var8=tf.Variable(var7, name="w1_bias", trainable=True)
   var11=tf.random_uniform(
-          [10,10], minval=-0.5477226, maxval=0.5477226, dtype=tf.float32) # 9
-  assert var11.shape.as_list() == [10,10]
+          [100,100], minval=-0.17320508, maxval=0.17320508, dtype=tf.float32) # 9
+  assert var11.shape.as_list() == [100,100]
   var12=tf.Variable(var11, name="w2_w", trainable=True)
-  var13=tf.truncated_normal([10], stddev=0.1, dtype=tf.float32) # 10
-  assert var13.shape.as_list() == [10]
+  var13=tf.truncated_normal([100], stddev=0.1, dtype=tf.float32) # 10
+  assert var13.shape.as_list() == [100]
   var14=tf.Variable(var13, name="w2_bias", trainable=True)
   var17=tf.random_uniform(
-          [10,2], minval=-0.70710677, maxval=0.70710677, dtype=tf.float32) # 15
-  assert var17.shape.as_list() == [10,2]
+          [100,2], minval=-0.24253562, maxval=0.24253562, dtype=tf.float32) # 15
+  assert var17.shape.as_list() == [100,2]
   var18=tf.Variable(var17, name="w3_w", trainable=True)
   var19=tf.truncated_normal([2], stddev=0.1, dtype=tf.float32) # 16
   assert var19.shape.as_list() == [2]
@@ -32,43 +33,43 @@ def mkModel(optimizer=tf.train.AdamOptimizer()):
   var23=tf.reshape(var22, [100,5])
   assert var23.shape.as_list() == [100,5]
   var24=var6
-  assert var24.shape.as_list() == [5,10]
+  assert var24.shape.as_list() == [5,100]
   var25=tf.matmul(var23, var24)
-  assert var25.shape.as_list() == [100,10]
-  var26=tf.reshape(var25, [100,10])
-  assert var26.shape.as_list() == [100,10]
+  assert var25.shape.as_list() == [100,100]
+  var26=tf.reshape(var25, [100,100])
+  assert var26.shape.as_list() == [100,100]
   var27=var8
-  assert var27.shape.as_list() == [10]
-  var28=tf.broadcast_to(tf.reshape(var27, [1,10]), [100,10])
-  assert var28.shape.as_list() == [100,10]
+  assert var27.shape.as_list() == [100]
+  var28=tf.broadcast_to(tf.reshape(var27, [1,100]), [100,100])
+  assert var28.shape.as_list() == [100,100]
   var29=tf.add(var26, var28)
-  assert var29.shape.as_list() == [100,10]
+  assert var29.shape.as_list() == [100,100]
   var30=tf.keras.layers.BatchNormalization(axis=1)(var29)
-  assert var30.shape.as_list() == [100,10]
+  assert var30.shape.as_list() == [100,100]
   var31=tf.nn.relu(var30)
-  assert var31.shape.as_list() == [100,10]
-  var32=tf.reshape(var31, [100,10])
-  assert var32.shape.as_list() == [100,10]
+  assert var31.shape.as_list() == [100,100]
+  var32=tf.reshape(var31, [100,100])
+  assert var32.shape.as_list() == [100,100]
   var33=var12
-  assert var33.shape.as_list() == [10,10]
+  assert var33.shape.as_list() == [100,100]
   var34=tf.matmul(var32, var33)
-  assert var34.shape.as_list() == [100,10]
-  var35=tf.reshape(var34, [100,10])
-  assert var35.shape.as_list() == [100,10]
+  assert var34.shape.as_list() == [100,100]
+  var35=tf.reshape(var34, [100,100])
+  assert var35.shape.as_list() == [100,100]
   var36=var14
-  assert var36.shape.as_list() == [10]
-  var37=tf.broadcast_to(tf.reshape(var36, [1,10]), [100,10])
-  assert var37.shape.as_list() == [100,10]
+  assert var36.shape.as_list() == [100]
+  var37=tf.broadcast_to(tf.reshape(var36, [1,100]), [100,100])
+  assert var37.shape.as_list() == [100,100]
   var38=tf.add(var35, var37)
-  assert var38.shape.as_list() == [100,10]
+  assert var38.shape.as_list() == [100,100]
   var39=tf.keras.layers.BatchNormalization(axis=1)(var38)
-  assert var39.shape.as_list() == [100,10]
+  assert var39.shape.as_list() == [100,100]
   var40=tf.nn.relu(var39)
-  assert var40.shape.as_list() == [100,10]
-  var41=tf.reshape(var40, [100,10])
-  assert var41.shape.as_list() == [100,10]
+  assert var40.shape.as_list() == [100,100]
+  var41=tf.reshape(var40, [100,100])
+  assert var41.shape.as_list() == [100,100]
   var42=var18
-  assert var42.shape.as_list() == [10,2]
+  assert var42.shape.as_list() == [100,2]
   var43=tf.matmul(var41, var42)
   assert var43.shape.as_list() == [100,2]
   var44=tf.reshape(var43, [100,2])

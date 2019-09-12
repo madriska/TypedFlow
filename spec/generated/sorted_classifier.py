@@ -18,7 +18,7 @@ def dataGenerator(bs):
         # negative examples
         v = None
         while True:
-          v = [random.uniform(0, 100) for _ in range(5)]
+          v = [random.uniform(-10000, 10000) for _ in range(5)]
           if list(v) != list(sorted(v)):
             break
         xs.append(v)
@@ -26,10 +26,10 @@ def dataGenerator(bs):
     yield {"x": xs, "y": ys}
 
 sess = tf.Session()
-model = mkModel(optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
+model = mkModel(optimizer=tf.train.AdamOptimizer(learning_rate=0.1))
 tyf.initialize_params(sess, model)
 # TODO the shape should be injected automatically here
-stats = tyf.train(sess, model, np.array([0.,0.]), dataGenerator)
+stats = tyf.train(sess, model, np.array([0.,0.]), dataGenerator, callbacks=[print])
 
 correct, total = stats[-1]['train']['metrics']
 acc = correct / total

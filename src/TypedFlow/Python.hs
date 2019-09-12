@@ -27,6 +27,7 @@ Stability   : experimental
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType #-}
@@ -36,9 +37,11 @@ Stability   : experimental
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 
-module TypedFlow.Python (compile, compileFn, compileGen, generateFile) where
+module TypedFlow.Python (compile, compileFn, compileGen, generateFile, rtsCode) where
 
+import Data.ByteString (ByteString)
 import Data.Char (toLower)
+import Data.FileEmbed (embedFile)
 import Data.Proxy
 import Data.List (genericReplicate, isPrefixOf)
 import GHC.TypeLits
@@ -401,17 +404,17 @@ grad :: UntypedExpression -> UntypedExpression -> UntypedExpression
 grad y vars = funcall "tf.gradients" [y, vars]
 
 -- | Batchify and compile a model with simple input to output mapping.
-compile :: forall ms batchSize sx tx sy ty sy_ ty_ p
-        .  (KnownShape ms, KnownNat batchSize, KnownShape sx, KnownTyp tx, KnownShape sy, KnownTyp ty, KnownShape sy_, KnownTyp ty_, All KnownShape p, KnownLen p)
+compile :: forall nAttrs ms batchSize sx tx sy ty sy_ ty_ p
+        .  (KnownNat nAttrs, KnownShape ms, KnownNat batchSize, KnownShape sx, KnownTyp tx, KnownShape sy, KnownTyp ty, KnownShape sy_, KnownTyp ty_, All KnownShape p, KnownLen p)
         => Options
         -> Gen (Tensor sx tx -> Tensor sy ty -> ModelOutputs ms ty_ p sy_)
         -> Python ()
-compile options fGen = compileGen @ms @batchSize options (simpleModel <$> fGen)
+compile options fGen = compileGen @nAttrs @ms @batchSize options (simpleModel <$> fGen)
 
 -- | Batchify and compile a model with generic  input to output mapping and states
-compileGen :: forall ms batchSize shapesAndTypes sy_ ty_ ps stateShapes.
+compileGen :: forall nAttrs ms batchSize shapesAndTypes sy_ ty_ ps stateShapes.
            (KnownShape ms, KnownNat batchSize, All KnownPlaceholder shapesAndTypes, KnownLen stateShapes,
-            KnownLen shapesAndTypes,
+            KnownLen shapesAndTypes, KnownNat nAttrs,
             All KnownShape stateShapes, KnownShape sy_, KnownTyp ty_, All KnownShape ps, KnownLen ps)
          => Options
          -> Gen (Placeholders shapesAndTypes -> HTV ty_ stateShapes -> StateAndOutputs ms ty_ ps (sy_ ': stateShapes))
@@ -419,7 +422,8 @@ compileGen :: forall ms batchSize shapesAndTypes sy_ ty_ ps stateShapes.
 compileGen options fGen =
   let batchedShapesKnown = mapFMap @(Cons batchSize) knownCons (allKnown @KnownShape @stateShapes typeSList)
   in knownAll batchedShapesKnown $
-     compileAlreadyBatched @batchSize options (precompile (batchModel @batchSize fGen))
+  -- TODO nAttrs is a nasty hack because we know sy == [batchSize, nAttrs]
+     compileAlreadyBatched @batchSize options (precompile @batchSize @nAttrs (batchModel @batchSize fGen))
 
 -- | Generic model compilation (do not use unless you know what you're doing)
 compileAlreadyBatched :: forall bs ty stateShapes ps. KnownNat bs
@@ -486,6 +490,10 @@ pretty = case kindVal @(TypKind t) of
   SFloat -> case bitsVal @(TypBits t) of
     SB32 -> float
     SB64 -> double
+
+-- | Python code of the runtime system.
+rtsCode :: ByteString
+rtsCode = $(embedFile "typedflow_rts.py")
 
 -- | State of the Python code being generated.
 data PyState = PyState {genText :: DOC

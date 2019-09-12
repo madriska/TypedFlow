@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 683bfbbbf0fffb51ad8deb9d0a94b75f831dd87982e342a79b96b96fbcfcf5ca
+-- hash: 3067b5d1a606def05aebd6e66de171e0a65852fc22b64da5d2de818550e1fca4
 
 name:           typedflow
 version:        0.9
@@ -56,7 +56,9 @@ library
       src
   build-depends:
       base ==4.*
+    , bytestring
     , containers
+    , file-embed
     , ghc-typelits-knownnat
     , mtl
     , pretty-compact
@@ -79,7 +81,9 @@ test-suite typedflow-spec
       spec
   build-depends:
       base ==4.*
+    , bytestring
     , containers
+    , file-embed
     , ghc-typelits-knownnat
     , mtl
     , neat-interpolation

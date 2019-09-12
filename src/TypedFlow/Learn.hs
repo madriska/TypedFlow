@@ -37,20 +37,21 @@ import Data.Proxy
 import System.IO.Unsafe
 import Data.Unique
 import TypedFlow.Types
-import TypedFlow.Types.Proofs (knownAppend, knownAppendS, knownSShape, knownTail, (?>))
-import TypedFlow.Abstract (Batched(..),broadcastGen,defaultT,reduceSum0)
+import TypedFlow.Types.Proofs (knownAppend, knownAppendS, knownSShape, knownTail, (?>), V)
+import TypedFlow.Abstract (Batched(..),broadcastGen,defaultT,reduceSum0,atShape)
 import TypedFlow.TF
 import Prelude hiding (RealFrac(..))
 import GHC.TypeLits
 import Control.Monad.State (modify, gets)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Triple of values that are always output in a model: prediction, loss and accuracy.
 -- @t@ is the type of the prediction.
 -- @s@ is the shape of the loss and accuracy
-data ModelOutput metricsShape t predictionShape s =
-  ModelOutput {modelY :: T (s++predictionShape) t -- ^ prediction (which can contain prediction-shaped info)
-              ,modelLoss :: T s Float32 -- ^ loss associated with the prediction
-              ,modelMetrics :: T (s++metricsShape) Float32 -- ^ metrics associated with the prediction (with additional shape as needed)
+data ModelOutput metricsShape ty predictionShape baseShape =
+  ModelOutput {modelY :: T (baseShape++predictionShape) ty -- ^ prediction (which can contain prediction-shaped info)
+              ,modelLoss :: T baseShape Float32 -- ^ loss associated with the prediction
+              ,modelMetrics :: T (baseShape++metricsShape) Float32 -- ^ metrics associated with the prediction (with additional shape as needed)
               ,modelName :: String
               }
 
@@ -60,9 +61,11 @@ type ConfusionMatrixShape = '[4] -- TP, TN, FP, FN
 -- | Several model outputs (for multitask models)
 -- F = flip, so      F (ModelOutput ms t) s
 --              =~=  \p -> ModelOutput ms t p s
-type ModelOutputs ms t ps s = NP (F (ModelOutput ms t) s) ps
+type ModelOutputs metricShape ty predictionShapes baseShape
+  = NP (F (ModelOutput metricShape ty) baseShape) predictionShapes
 
-type OneOutput ms t p s = ModelOutputs ms t '[ p ] s
+type OneOutput metricShape ty predictionShape baseShape
+  = ModelOutputs metricShape ty '[ predictionShape ] baseShape
 
 singleModel :: ModelOutput ms t p s -> ModelOutputs ms t '[ p ] s
 singleModel m = F m :* Unit
@@ -72,16 +75,31 @@ singleModel m = F m :* Unit
 -- output is the shape of the output (one element per individual loss and accuracy)
 -- p is the shape of each output element.
 -- g is the shape of each gold output --- often equal to p.
-type Model ms input tIn g p output tOut
-  = T input tIn -> T (g++output) tOut -> OneOutput ms tOut p output
+type Model metricShape input tyIn gold predictionShape baseShape tyOut
+  =  T input tyIn
+  -> T (gold++baseShape) tyOut
+  -> OneOutput metricShape tyOut predictionShape baseShape
 
 -- TODO right now we only support combining metrics homogenously (+ additively)
-modelBoth :: forall ms p q s t.
-    KnownShape s => KnownShape ms => KnownTyp t => KnownNat q => KnownNat p => ModelOutput ms t '[p] s -> ModelOutput ms t '[q] s -> ModelOutput ms t '[p + q] s
-modelBoth (ModelOutput y1 l1 c1 n1) (ModelOutput y2 l2 c2 _) =
-  knownAppend @s @ms ?> ModelOutput arst (l1 + l2) (c1 + c2) n1
-    where arst :: T (s ++ '[p + q]) t
-          arst = zipWithTT @s @'[p] @'[q] concat0 y1 y2
+-- modelBoth :: forall ms p q s t.
+--     KnownShape s => KnownShape ms => KnownTyp t => KnownNat q => KnownNat p => ModelOutput ms t '[p] s -> ModelOutput ms t '[q] s -> ModelOutput ms t '[p + q] s
+-- modelBoth (ModelOutput y1 l1 c1 n1) (ModelOutput y2 l2 c2 _) =
+--   knownAppend @s @ms ?> ModelOutput arst (l1 + l2) (c1 + c2) n1
+--     where arst :: T (s ++ '[p + q]) t
+--           arst = zipWithTT @s @'[p] @'[q] concat0 y1 y2
+
+-- | Stack a vector of models of the same shape, yielding a new
+-- initial axis.
+parallel :: forall s n p t ms
+          . (KnownShape s, KnownNat n, KnownShape p, KnownShape ms)
+         => V n (ModelOutput ms t p s) -> ModelOutput ms t p (n ': s)
+parallel outputs
+  = ModelOutput
+  { modelName = ""
+  , modelY =       knownAppend @s @p  ?> stack0 $ modelY       <$> outputs
+  , modelLoss =                          stack0 $ modelLoss    <$> outputs
+  , modelMetrics = knownAppend @s @ms ?> stack0 $ modelMetrics <$> outputs
+  }
 
 -- | First type argument is the number of classes.  @categorical
 -- logits gold@ return (prediction, accuracy, loss)
@@ -246,9 +264,10 @@ addRegularizer r = modify $ \GState{..} -> GState{genRegularizers=r:genRegulariz
 -- - add training phase placeholder
 -- - create the state variables
 -- - compute final accuracy and loss (adding eventual regularizers), and expose them.
-precompile :: forall ms ps sy ty stateShapes.
+precompile :: forall s n ms ps sy ty stateShapes.
               All KnownShape stateShapes
            => KnownLen stateShapes
+           => (KnownNat s, KnownNat n)
            => (KnownShape ms, KnownShape sy, All KnownShape ps, KnownTyp ty, KnownLen ps)
            => (HTV ty stateShapes -> Gen (StateAndOutputs ms ty ps (sy ': stateShapes)))
            -> (Gen (NP (K (String, HTV ty stateShapes,Scalar Float32)) ps))
@@ -261,15 +280,19 @@ precompile model =
     updates <- updateStates @stateShapes stateVars newStates
     let go :: forall xs. NP (Sat KnownShape) xs -> ModelOutputs ms ty xs sy -> Gen (NP (K (String,HTV ty stateShapes,Scalar Float32)) xs)
         go Unit Unit = return Unit
-        go (x@Sat :* xs) (F ModelOutput{..} :* ms) = knownAppendS (typeSList @sy) x ?> do
-          let loss = reduceMeanAll modelLoss ⊕ addN regularizers
-              -- Metrics are summed elementwise across the @sy@,
-              -- resulting in one metric of shape @ms@.
-              metrics = sumFirstAxes @sy @ms modelMetrics
-              y_ = modelY
-          peekAt (modelName ++ "y_")  y_
-          peekAt (modelName ++ "metrics") metrics
-          (K (modelName,updates,loss) :*) <$> go xs ms
+        go (x@Sat :* xs) (F ModelOutput{..} :* ms) =
+          knownAppendS (typeSList @sy) x ?>
+          knownAppend @sy @ms ?>
+            do
+              let loss = reduceMeanAll modelLoss ⊕ addN regularizers
+                  -- Metrics are summed elementwise across the samples `s` in the batch `s:n:ms`,
+                  -- resulting in one metric of shape @n:ms@.
+                  -- TODO go back and fix this, ya big jerk
+                  metrics = reduceSum0 (unsafeCoerce modelMetrics :: T (s ': n ': ms) Float32)
+                  y_ = modelY
+              peekAt (modelName ++ "y_")  y_
+              peekAt (modelName ++ "metrics") metrics
+              (K (modelName,updates,loss) :*) <$> go xs ms
     go (allKnown @KnownShape typeSList) models
 
 -- | Sum a tensor of shape `ys ++ xs` over the `ys` axes, preserving
